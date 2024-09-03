@@ -1,0 +1,132 @@
+{% extends 'booking/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+<body>Booking overview: {{ device.name }} </body>
+<script>
+    function getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    }
+
+    async function deleteBooking(booking_id) {
+        try {
+            const response = await fetch(`/api/delete/${booking_id}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': getCsrfToken() }
+            });
+            const json = await response.json();
+            if (response.ok) {
+                alert(json.message);
+            } else {
+                throw new Error(`http error, status:${response.status}`);
+            }
+            location.reload();
+        } catch (e) {
+            console.error('error in deleteBooking function:', e);
+        }
+    }
+
+    async function addBooking(data = {}) {
+        try {
+            const response = await fetch('/api/addbooking/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify(data),
+            });
+            const json = await response.json();
+            if (response.ok) {
+                alert(json.message)
+            } else {
+                throw new Error(`http error, status:${response.status}`);
+            }
+            location.reload();
+        } catch (e) {
+            console.error('error in addBooking function:', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const calendarEl = document.getElementById('calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            selectable: true,
+            selectHelper: true,
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next present',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay listViewMonth,listViewWeek,listViewDay'
+            },
+            customButtons: {
+                present: {
+                    text: 'present',
+                    click: function () {
+                        calendar.today();
+                    }
+                },
+                listViewMonth: {
+                    text: 'list month',
+                    click: function () {
+                        calendar.changeView('listMonth');
+                    }
+                },
+                listViewWeek: {
+                    text: 'list week',
+                    click: function () {
+                        calendar.changeView('listWeek');
+                    }
+                },
+                listViewDay: {
+                    text: 'list day',
+                    click: function () {
+                        calendar.changeView('listDay');
+                    }
+                },
+            },
+            events:'/api/bookings/{{device.deviceinstance_id}}',
+            dateClick: function (info) {
+                // click on a day will change to day view
+                if ('{{ user.is_authenticated }}' === 'True') {
+                    calendar.changeView('timeGridDay', info.dateStr);
+                } else {
+                    alert('Please login to book a time.');
+                }
+            },
+            eventClick: function (eventClickInfo) {
+                // delete event
+                if (confirm("Do you want to delete booking " + eventClickInfo.event.title + "?")) {
+                    deleteBooking(eventClickInfo.event.id);
+                }
+            }
+            ,
+            select: function (selectionInfo) {
+                // disable all day selections
+                if (!selectionInfo.allDay) {
+                    // user input booking title
+                    var description = prompt("add a description");
+                    // generate unique booking id
+                    const booking_id = 'booking_' + new Date().getTime();
+                    var start = new Date(selectionInfo.startStr);
+                    var end = new Date(selectionInfo.endStr);
+                    addBooking({
+                        datetime_start: selectionInfo.startStr,
+                        datetime_end: selectionInfo.endStr,
+                        description: description,
+                        duration: ((end - start) / (1000 * 60)).toString(),
+                        timestamp: start.getTime().toString(),
+                        device_instance_id: '{{ device.deviceinstance_id }}' ,
+                    }); 
+                }
+            }
+
+        });
+        calendar.render();
+    })
+</script>
+<div id="calendar"></div>
+{% endblock %}

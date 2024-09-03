@@ -1,0 +1,104 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django stuff:
+*.log
+*.pot
+*.pyc
+*.pyo
+*.sqlite3
+
+# Ignore the local SQLite database
+db.sqlite3
+db.sqlite3-journal
+
+# Ignore Django migrations
+*/migrations/*
+
+# If you're using MySQL or PostgreSQL, ignore the following:
+*.sql
+*.sql.gz
+*.psql
+*.pgsql
+
+# Ignore the virtual environment directory
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+
+# Ignore Python egg files
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg-info/
+*.installed.cfg
+*.egg
+
+# Ignore coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Ignore static and media directories (if they are generated or managed)
+staticfiles/
+media/
+
+# Ignore configuration files
+.env
+*.env
+*.ini
+*.cfg
+*.toml
+
+# Ignore IDE specific files (e.g., PyCharm, VSCode)
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*.swd
+*.swt
+
+# Ignore node_modules if you have frontend dependencies managed by npm or yarn
+node_modules/
+
+# Ignore pipenv and poetry files
+Pipfile.lock
+poetry.lock
+
+# Ignore compiled C extensions
+*.so
+
+# Ignore pytest cache
+.pytest_cache/
+.cache/
+
+# Ignore celery beat schedule file
+celerybeat-schedule
+
+# Ignore Django's debug toolbar cache
+debug-toolbar-panel-cache
+
+# Ignore gunicorn PID file
+gunicorn.pid
