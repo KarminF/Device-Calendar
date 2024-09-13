@@ -27,13 +27,14 @@ class DeviceInstance(models.Model):
 
 
     def __str__(self):
-        return self.name_full or ""
+        return self.name or ""
 
     def __repr__(self):
-        return self.name_full or ""
+        return self.name or ""
 
 
 class CalendarAbstract(models.Model):
+    title = models.TextField(blank=True, help_text="title of the calendar entry")
     description = models.TextField(blank=True, help_text="text of the calendar entry")
     datetime_start = models.DateTimeField(
         default=timezone.now, help_text="start date & time of the event. RFC 5545 - DTSTART"
