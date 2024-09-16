@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
@@ -74,8 +75,8 @@ def add_booking(request):
         try:
             DeviceBookingCalendar.objects.create(
                                     title=data.get('title'),
-                                    datetime_start=data.get('datetime_start'),
-                                    datetime_end=data.get('datetime_end'),
+                                    datetime_start=datetime.strptime(data.get('datetime_start'), '%Y-%m-%dT%H:%M:%S%z'),
+                                    datetime_end=datetime.strptime(data.get('datetime_end'), '%Y-%m-%dT%H:%M:%S%z'),
                                     description=data.get('description'),
                                     user=request.user,
                                     duration=data.get('duration'),

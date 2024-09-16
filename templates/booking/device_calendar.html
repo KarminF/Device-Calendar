@@ -18,7 +18,7 @@
                 <label for="description">Description:</label><br>
                 <input type="text" v-model="bookingData.description" id="description" name="description"><br><br>
                 <button type="submit">Submit</button>
-                <button type="button" @click="closeForm(selectionInfo)">Close</button>
+                <button type="button" @click="closeForm()">Close</button>
             </form>
         </div>
     </div>
@@ -44,23 +44,20 @@
             openForm(selectionInfo) {
                 this.isFormOpen = true;
                 this.selectionInfo = selectionInfo;
-                console.log(selectionInfo)
             },
             closeForm() {
                 this.isFormOpen = false;
             },
-            submitForm(selectionInfo) {
-                this.closeForm();
+            submitForm() {
                 // generate unique booking id
                 const booking_id = 'booking_' + new Date().getTime();
-                var start = new Date(selectionInfo.startStr);
-                var end = new Date(selectionInfo.endStr);
-                console.log(selectionInfo);
+                var start = new Date(this.selectionInfo.startStr);
+                var end = new Date(this.selectionInfo.endStr);
                 addBooking({
                     title: this.bookingData.title,
                     description: this.bookingData.description,
-                    datetime_start: selectionInfo.startStr,
-                    datetime_end: selectionInfo.endStr,
+                    datetime_start: this.selectionInfo.startStr,
+                    datetime_end: this.selectionInfo.endStr,
                     duration: ((end - start) / (1000 * 60)).toString(),
                     timestamp: start.getTime().toString(),
                     device_instance_id: '{{ device.deviceinstance_id }}' ,
@@ -166,7 +163,7 @@
                 // disable all day selections
                 if (!selectionInfo.allDay) {
                     if ('{{ user.is_authenticated }}' === 'True') {
-                        vm.openForm();
+                        vm.openForm(selectionInfo);
                     } else {
                         alert('Please login to book a time.');
                     }
