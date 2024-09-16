@@ -7,11 +7,6 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 
 from .forms import LoginFrom, RegistrationForm
-from .models import Bookings
-
-
-def index2(request):
-    return render(request, 'booking/index.html')
 
 
 def login_view(request):
@@ -62,6 +57,7 @@ def api_bookings(request, device_id):
                 'start': booking.datetime_start,
                 'end': booking.datetime_end,
                 'title': "booked by " + username + "\ndescription:" + booking.description,
+                'id': booking.devicebookingcalendar_id,
             }
             bookings.append(booking_data)
         return JsonResponse(bookings, safe=False)
@@ -76,7 +72,9 @@ def add_booking(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         try:
-            DeviceBookingCalendar.objects.create(datetime_start=data.get('datetime_start'),
+            DeviceBookingCalendar.objects.create(
+                                    title=data.get('title'),
+                                    datetime_start=data.get('datetime_start'),
                                     datetime_end=data.get('datetime_end'),
                                     description=data.get('description'),
                                     user=request.user,
@@ -96,7 +94,7 @@ def delete_booking(request, booking_id):
     # get booking id and delete booking from database
     if request.method == 'DELETE':
         try:
-            Bookings.objects.filter(booking_id=booking_id).delete()
+            DeviceBookingCalendar.objects.filter(devicebookingcalendar_id=booking_id).delete()
             return JsonResponse({'message': 'Booking deleted!'})
         except Exception as e:
             return JsonResponse({'message': str(e)})
@@ -115,4 +113,4 @@ def index(request):
 def device_calendar(request, device_id):
     device = get_object_or_404(DeviceInstance, pk=device_id)
     calendar_events = DeviceBookingCalendar.objects.filter(device_instance=device)
-    return render(request, 'booking/device_calendar.html', {'device': device, 'calendar_events': calendar_events})
+    return render(request, 'booking/device_calendar.html', {'device': device, 'calendar_events': calendar_events, 'user':request.user})

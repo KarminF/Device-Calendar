@@ -5,12 +5,75 @@
 
 <meta name="csrf-token" content="{{ csrf_token }}">
 
-<body>Booking overview: {{ device.name }} </body>
+<body>
+    <h2>Booking overview: {{ device.name }} </h2>
+    <p>drag to book a time slot.</p>
+
+    <div id="app">
+        <div v-if="isFormOpen" style="position:fixed; left:50%; top:50%; transform:translate(-50%, -50%); border:1px solid #000; padding:20px; background-color:#fff; z-index:1000;">
+            <h2>Enter booking information</h2>
+            <form @submit.prevent="submitForm">
+                <label for="title">Title:</label><br>
+                <input type="text" v-model="bookingData.title" id="title" name="title"><br><br>
+                <label for="description">Description:</label><br>
+                <input type="text" v-model="bookingData.description" id="description" name="description"><br><br>
+                <button type="submit">Submit</button>
+                <button type="button" @click="closeForm(selectionInfo)">Close</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+
+    </script>
+</body>
+
 <script>
+    const app = Vue.createApp({
+        data() {
+            return {
+                isFormOpen: false,
+                bookingData: {
+                    title: '',
+                    description: ''
+                },
+                selectionInfo:{}
+            }
+        },
+        methods: {
+            openForm(selectionInfo) {
+                this.isFormOpen = true;
+                this.selectionInfo = selectionInfo;
+                console.log(selectionInfo)
+            },
+            closeForm() {
+                this.isFormOpen = false;
+            },
+            submitForm(selectionInfo) {
+                this.closeForm();
+                // generate unique booking id
+                const booking_id = 'booking_' + new Date().getTime();
+                var start = new Date(selectionInfo.startStr);
+                var end = new Date(selectionInfo.endStr);
+                console.log(selectionInfo);
+                addBooking({
+                    title: this.bookingData.title,
+                    description: this.bookingData.description,
+                    datetime_start: selectionInfo.startStr,
+                    datetime_end: selectionInfo.endStr,
+                    duration: ((end - start) / (1000 * 60)).toString(),
+                    timestamp: start.getTime().toString(),
+                    device_instance_id: '{{ device.deviceinstance_id }}' ,
+                });
+            }
+        }
+    })
+    const vm = app.mount('#app');
+
     function getCsrfToken() {
         return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     }
-
+    
     async function deleteBooking(booking_id) {
         try {
             const response = await fetch(`/api/delete/${booking_id}`, {
@@ -28,7 +91,7 @@
             console.error('error in deleteBooking function:', e);
         }
     }
-
+    
     async function addBooking(data = {}) {
         try {
             const response = await fetch('/api/addbooking/', {
@@ -50,7 +113,7 @@
             console.error('error in addBooking function:', e);
         }
     }
-
+    
     document.addEventListener('DOMContentLoaded', function () {
         const calendarEl = document.getElementById('calendar');
         const calendar = new FullCalendar.Calendar(calendarEl, {
@@ -90,12 +153,7 @@
             },
             events:'/api/bookings/{{device.deviceinstance_id}}',
             dateClick: function (info) {
-                // click on a day will change to day view
-                if ('{{ user.is_authenticated }}' === 'True') {
-                    calendar.changeView('timeGridDay', info.dateStr);
-                } else {
-                    alert('Please login to book a time.');
-                }
+                calendar.changeView('timeGridDay', info.dateStr);
             },
             eventClick: function (eventClickInfo) {
                 // delete event
@@ -107,23 +165,14 @@
             select: function (selectionInfo) {
                 // disable all day selections
                 if (!selectionInfo.allDay) {
-                    // user input booking title
-                    var description = prompt("add a description");
-                    // generate unique booking id
-                    const booking_id = 'booking_' + new Date().getTime();
-                    var start = new Date(selectionInfo.startStr);
-                    var end = new Date(selectionInfo.endStr);
-                    addBooking({
-                        datetime_start: selectionInfo.startStr,
-                        datetime_end: selectionInfo.endStr,
-                        description: description,
-                        duration: ((end - start) / (1000 * 60)).toString(),
-                        timestamp: start.getTime().toString(),
-                        device_instance_id: '{{ device.deviceinstance_id }}' ,
-                    }); 
+                    if ('{{ user.is_authenticated }}' === 'True') {
+                        vm.openForm();
+                    } else {
+                        alert('Please login to book a time.');
+                    }
                 }
             }
-
+    
         });
         calendar.render();
     })
