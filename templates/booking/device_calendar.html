@@ -10,15 +10,33 @@
     <p>drag to book a time slot.</p>
 
     <div id="app">
-        <div v-if="isFormOpen" style="position:fixed; left:50%; top:50%; transform:translate(-50%, -50%); border:1px solid #000; padding:20px; background-color:#fff; z-index:1000;">
+        <!-- Booking Form -->
+        <div v-if="isBookingFormOpen" style="position:fixed; left:50%; top:50%; transform:translate(-50%, -50%); border:1px solid #000; padding:20px; background-color:#fff; z-index:1000;">
             <h2>Enter booking information</h2>
-            <form @submit.prevent="submitForm">
-                <label for="title">Title:</label><br>
+            <form @submit.prevent="submitBookingForm">
+                <label>Title:</label><br>
                 <input type="text" v-model="bookingData.title" id="title" name="title"><br><br>
-                <label for="description">Description:</label><br>
+                <label>Description:</label><br>
                 <input type="text" v-model="bookingData.description" id="description" name="description"><br><br>
                 <button type="submit">Submit</button>
-                <button type="button" @click="closeForm()">Close</button>
+                <button type="button" @click="closeBookingForm()">Close</button>
+            </form>
+        </div>
+
+        <!-- Edit Form -->
+        <div v-if="isEditFormOpen" style="position:fixed; left:50%; top:50%; transform:translate(-50%, -50%); border:1px solid #000; padding:20px; background-color:#fff; z-index:1000;">
+            <h2>edit {{event.title}}</h2>
+            <form @submit.prevent="submitEditForm">
+                <label>Title:</label><br>
+                <input type="text" v-model="event.title" id="title" name="title" :value="event.title"><br><br>
+                <label>Description:</label><br>
+                <input type="text" v-model="event.description" id="description" name="description" :value="event.description"><br><br>
+                <label>Start:</label><br>
+                <input type="datetime-local" v-model="event.datetime_start" id="start" name="start"><br><br>
+                <label>End:</label><br>
+                <input type="datetime-local" v-model="event.datetime_end" id="end" name="end"><br><br>
+                <button type="submit">Submit</button>
+                <button type="button" @click="closeEditForm()">Close</button>
             </form>
         </div>
     </div>
@@ -32,23 +50,25 @@
     const app = Vue.createApp({
         data() {
             return {
-                isFormOpen: false,
+                isBookingFormOpen: false,
+                isEditFormOpen: false,
                 bookingData: {
                     title: '',
                     description: ''
                 },
-                selectionInfo:{}
+                selectionInfo:{},
+                event:{},
             }
         },
         methods: {
-            openForm(selectionInfo) {
-                this.isFormOpen = true;
+            openBookingForm(selectionInfo) {
+                this.isBookingFormOpen = true;
                 this.selectionInfo = selectionInfo;
             },
-            closeForm() {
-                this.isFormOpen = false;
+            closeBookingForm() {
+                this.isBookingFormOpen = false;
             },
-            submitForm() {
+            submitBookingForm() {
                 // generate unique booking id
                 const booking_id = 'booking_' + new Date().getTime();
                 var start = new Date(this.selectionInfo.startStr);
@@ -62,6 +82,23 @@
                     timestamp: start.getTime().toString(),
                     device_instance_id: '{{ device.deviceinstance_id }}' ,
                 });
+            },
+            openEditForm(event) {
+                // datastructure of event here is different from calendar's events, it comes from the database directly
+                this.isEditFormOpen = true;
+                event.datetime_start = event.datetime_start.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+                event.datetime_start = event.datetime_start ? event.datetime_start[1] : '';
+                event.datetime_end = event.datetime_end.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+                event.datetime_end = event.datetime_end ? event.datetime_end[1] : '';
+                console.log(event);
+                this.event= event;
+            },
+            closeEditForm() {
+                this.isEditFormOpen = false;
+            },
+            submitEditForm(){
+                // to do
+                this.isEditFormOpen = false;
             }
         }
     })
@@ -110,6 +147,20 @@
             console.error('error in addBooking function:', e);
         }
     }
+
+    async function getOneBooking(booking_id) {
+        try {
+            const response = await fetch(`/api/get-one-booking/${booking_id}`);
+            const json = await response.json();
+            if (response.ok) {
+                return json;
+            } else {
+                throw new Error(`http error, status:${response.status}`);
+            }
+        } catch (e) {
+            console.error('error in getOneBooking function:', e);
+        }
+    }
     
     document.addEventListener('DOMContentLoaded', function () {
         const calendarEl = document.getElementById('calendar');
@@ -153,9 +204,13 @@
                 calendar.changeView('timeGridDay', info.dateStr);
             },
             eventClick: function (eventClickInfo) {
-                // delete event
-                if (confirm("Do you want to delete booking " + eventClickInfo.event.title + "?")) {
-                    deleteBooking(eventClickInfo.event.id);
+                if ('{{ user.is_authenticated }}' === 'True') {
+                    getOneBooking(eventClickInfo.event.id).then(data => {
+                        const parsedData = JSON.parse(data);
+                        vm.openEditForm(parsedData[0].fields);
+                    });
+                } else {
+                    alert('Please login.');
                 }
             }
             ,
@@ -163,7 +218,7 @@
                 // disable all day selections
                 if (!selectionInfo.allDay) {
                     if ('{{ user.is_authenticated }}' === 'True') {
-                        vm.openForm(selectionInfo);
+                        vm.openBookingForm(selectionInfo);
                     } else {
                         alert('Please login to book a time.');
                     }

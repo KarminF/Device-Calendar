@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from django.core import serializers
 
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
@@ -48,8 +49,8 @@ def user_logout(request):
 
 @login_required
 def api_bookings(request, device_id):
+    # get all bookings for a device
     try:
-        # provide the list of events for the calendar to call
         booking_set = DeviceBookingCalendar.objects.filter(device_instance_id=device_id).all()
         bookings = []
         for booking in booking_set:
@@ -57,7 +58,7 @@ def api_bookings(request, device_id):
             booking_data = {
                 'start': booking.datetime_start,
                 'end': booking.datetime_end,
-                'title': "booked by " + username + "\ndescription:" + booking.description,
+                'title': "booked by " + username + "description:" + booking.description,
                 'id': booking.devicebookingcalendar_id,
             }
             bookings.append(booking_data)
@@ -66,6 +67,15 @@ def api_bookings(request, device_id):
         print("Error in api_bookings:", str(e))
         return JsonResponse({'error': str(e)}, status=500)
 
+@login_required
+def api_get_one_booking(request, booking_id):
+    try:
+        booking = DeviceBookingCalendar.objects.filter(devicebookingcalendar_id=booking_id).first()
+        data = serializers.serialize('json', [booking])
+        return JsonResponse(data, safe=False)
+
+    except Exception as e:
+        return JsonResponse({'message': str(e)})
 
 @login_required
 def add_booking(request):
@@ -113,5 +123,4 @@ def index(request):
 @login_required
 def device_calendar(request, device_id):
     device = get_object_or_404(DeviceInstance, pk=device_id)
-    calendar_events = DeviceBookingCalendar.objects.filter(device_instance=device)
-    return render(request, 'booking/device_calendar.html', {'device': device, 'calendar_events': calendar_events, 'user':request.user})
+    return render(request, 'booking/device_calendar.html', {'device': device, 'user':request.user})
