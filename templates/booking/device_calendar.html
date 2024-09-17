@@ -8,7 +8,6 @@
 <body>
     <h2>Booking overview: {{ device.name }} </h2>
     <p>drag to book a time slot.</p>
-
     <div id="app">
         <!-- Booking Form -->
         <div v-if="isBookingFormOpen" style="position:fixed; left:50%; top:50%; transform:translate(-50%, -50%); border:1px solid #000; padding:20px; background-color:#fff; z-index:1000;">
@@ -25,25 +24,34 @@
 
         <!-- Edit Form -->
         <div v-if="isEditFormOpen" style="position:fixed; left:50%; top:50%; transform:translate(-50%, -50%); border:1px solid #000; padding:20px; background-color:#fff; z-index:1000;">
-            <h2>edit {{event.title}}</h2>
-            <form @submit.prevent="submitEditForm">
-                <label>Title:</label><br>
-                <input type="text" v-model="event.title" id="title" name="title" :value="event.title"><br><br>
-                <label>Description:</label><br>
-                <input type="text" v-model="event.description" id="description" name="description" :value="event.description"><br><br>
-                <label>Start:</label><br>
-                <input type="datetime-local" v-model="event.datetime_start" id="start" name="start"><br><br>
-                <label>End:</label><br>
-                <input type="datetime-local" v-model="event.datetime_end" id="end" name="end"><br><br>
-                <button type="submit">Submit</button>
+            <div v-if="event.user == {{ user.id }}">
+                {% verbatim %}
+                <h2>edit {{event.title}}</h2>
+                <form @submit.prevent="submitEditForm">
+                    <label>Title:</label><br>
+                    <input type="text" v-model="event.title" id="title" name="title" ><br><br>
+                    <label>Description:</label><br>
+                    <input type="text" v-model="event.description" id="description" name="description" ><br><br>
+                    <label>Start:</label><br>
+                    <input type="datetime-local" v-model="event.datetime_start" id="start" name="start"><br><br>
+                    <label>End:</label><br>
+                    <input type="datetime-local" v-model="event.datetime_end" id="end" name="end"><br><br>
+                    <button type="submit">Submit</button>
+                    <button type="button" @click="deleteBooking()">Delete</button>
+                    <button type="button" @click="closeEditForm()">Close</button>
+                </form>
+                {% endverbatim %}
+            </div>
+            <div v-else>
+                {% verbatim %}
+                <h3>Booking by: {{ eventUsername }}</h3><br>
+                <p>Tittle:{{ event.title }}</p>
+                <p>Description:{{ event.description }}</p>
                 <button type="button" @click="closeEditForm()">Close</button>
-            </form>
+                {% endverbatim %}
+            </div>
         </div>
     </div>
-
-    <script>
-
-    </script>
 </body>
 
 <script>
@@ -52,6 +60,7 @@
             return {
                 isBookingFormOpen: false,
                 isEditFormOpen: false,
+                eventUsername:'',
                 bookingData: {
                     title: '',
                     description: ''
@@ -86,6 +95,7 @@
             openEditForm(event) {
                 // datastructure of event here is different from calendar's events, it comes from the database directly
                 this.isEditFormOpen = true;
+                // make datetime available for input type datetime-local
                 event.datetime_start = event.datetime_start.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
                 event.datetime_start = event.datetime_start ? event.datetime_start[1] : '';
                 event.datetime_end = event.datetime_end.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
@@ -96,10 +106,24 @@
             closeEditForm() {
                 this.isEditFormOpen = false;
             },
+            deleteBooking() {
+                deleteBooking(this.event.id);
+            },
             submitEditForm(){
-                // to do
+                start = new Date(this.event.datetime_start);
+                end = new Date(this.event.datetime_end);
+                editBooking({
+                    title: this.event.title,
+                    description: this.event.description,
+                    devicebookingcalendar_id: this.event.id,
+                    datetime_start: this.event.start,
+                    datetime_end: this.event.end,
+                    duration: ((end - start) / (1000 * 60)).toString(),
+                    timestamp: start.getTime().toString(),
+                    device_instance_id: '{{ device.deviceinstance_id }}' ,
+                });
                 this.isEditFormOpen = false;
-            }
+            },
         }
     })
     const vm = app.mount('#app');
@@ -123,6 +147,28 @@
             location.reload();
         } catch (e) {
             console.error('error in deleteBooking function:', e);
+        }
+    }
+
+    async function editBooking(data = {}){
+        try {
+            const response = await fetch('/api/editbooking/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify(data),
+            });
+            const json = await response.json();
+            if (response.ok) {
+                alert(json.message)
+            } else {
+                throw new Error(`http error, status:${response.status}`);
+            }
+            location.reload();
+        } catch (e) {
+            console.error('error in editBooking function:', e);
         }
     }
     
@@ -159,6 +205,20 @@
             }
         } catch (e) {
             console.error('error in getOneBooking function:', e);
+        }
+    }
+
+    async function getUsername(user_id) {
+        try {
+            const response = await fetch(`/api/get-username/${user_id}`);
+            const json = await response.json();
+            if (response.ok) {
+                return json;
+            } else {
+                throw new Error(`http error, status:${response.status}`);
+            }
+        } catch (e) {
+            console.error('error in getUsername function:', e);
         }
     }
     
@@ -207,7 +267,16 @@
                 if ('{{ user.is_authenticated }}' === 'True') {
                     getOneBooking(eventClickInfo.event.id).then(data => {
                         const parsedData = JSON.parse(data);
+                        console.log(parsedData);
+                        getUsername(parsedData[0].fields.user).then(data => {
+                            vm.eventUsername = data.username;
+                            // console.log(typeof vm.eventUsername);
+                            // console.log(vm.eventUsername);
+                            // console.log('data');
+                            // console.log(data);
+                        });
                         vm.openEditForm(parsedData[0].fields);
+                        vm.event.id = parsedData[0].pk;
                     });
                 } else {
                     alert('Please login.');

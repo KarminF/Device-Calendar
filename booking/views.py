@@ -58,7 +58,7 @@ def api_bookings(request, device_id):
             booking_data = {
                 'start': booking.datetime_start,
                 'end': booking.datetime_end,
-                'title': "booked by " + username + "description:" + booking.description,
+                'title': "booked by " + username + ". description:" + booking.description,
                 'id': booking.devicebookingcalendar_id,
             }
             bookings.append(booking_data)
@@ -74,6 +74,14 @@ def api_get_one_booking(request, booking_id):
         data = serializers.serialize('json', [booking])
         return JsonResponse(data, safe=False)
 
+    except Exception as e:
+        return JsonResponse({'message': str(e)})
+    
+@login_required
+def api_get_username(request, user_id):
+    try:
+        user = User.objects.filter(id=user_id).first()
+        return JsonResponse({'username': user.username})
     except Exception as e:
         return JsonResponse({'message': str(e)})
 
