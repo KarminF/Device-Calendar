@@ -91,13 +91,15 @@ def add_booking(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         try:
+            start = datetime.strptime(data.get('datetime_start')[:16], '%Y-%m-%dT%H:%M')
+            end = datetime.strptime(data.get('datetime_end')[:16], '%Y-%m-%dT%H:%M')
             DeviceBookingCalendar.objects.create(
                                     title=data.get('title'),
-                                    datetime_start=datetime.strptime(data.get('datetime_start'), '%Y-%m-%dT%H:%M:%S%z'),
-                                    datetime_end=datetime.strptime(data.get('datetime_end'), '%Y-%m-%dT%H:%M:%S%z'),
+                                    datetime_start=start,
+                                    datetime_end=end,
                                     description=data.get('description'),
                                     user=request.user,
-                                    duration=data.get('duration'),
+                                    duration=end - start,
                                     timestamp=data.get('timestamp'),
                                     device_instance=DeviceInstance.objects.filter(deviceinstance_id=data.get('device_instance_id')).first(),
                                     )
@@ -107,6 +109,33 @@ def add_booking(request):
 
     return JsonResponse({'message': 'invalid request'})
 
+@login_required
+def edit_booking(request, booking_id):
+    # get booking info and update in database
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        try:
+            booking = DeviceBookingCalendar.objects.filter(devicebookingcalendar_id=booking_id).first()
+            if data.get('title') is not None:
+                booking.title = data.get('title')
+            if data.get('datetime_start') is not None:
+                booking.datetime_start = datetime.strptime(data.get('datetime_start')[:16], '%Y-%m-%dT%H:%M')
+            if data.get('datetime_end') is not None:
+                booking.datetime_end = datetime.strptime(data.get('datetime_end')[:16], '%Y-%m-%dT%H:%M')
+            if data.get('description') is not None:
+                booking.description = data.get('description')
+            if data.get('duration') is not None:
+                booking.duration = data.get('duration')
+            if data.get('timestamp') is not None:
+                booking.timestamp = data.get('timestamp')
+            if data.get('device_instance_id') is not None:
+                booking.device_instance = DeviceInstance.objects.filter(deviceinstance_id=data.get('device_instance_id')).first()
+            booking.save()
+            return JsonResponse({'message': 'Booking updated!'})
+        except Exception as e:
+            return JsonResponse({'message': str(e)})
+
+    return JsonResponse({'message': 'invalid request'})
 
 @login_required
 def delete_booking(request, booking_id):
